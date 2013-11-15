@@ -1,0 +1,206 @@
+<html>
+<head>
+    <title></title>
+    <link type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/themes/base/jquery-ui.css" />
+	<link type="text/css" href="css/snakes.css" rel="stylesheet"  />
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.js"></script> 
+
+	<script type="text/javascript">
+	
+		var boardWidth = 50;
+		var boardHeight = 20;
+		var snakeLength = 5;
+		
+		var startPos = { x:25, y:10 };
+		var snakeParts = [startPos];				
+		var direction = 'right';	
+		
+	    $(function()
+	    {			
+			$('#board').keydown(function(event)
+			{
+				switch(event.keyCode)
+				{
+					case 37: 
+						direction = 'left';
+						break;										
+					case 38: 
+						direction = 'up';
+						break;
+					case 39: 
+						direction = 'right';
+						break;
+					case 40: 
+						direction = 'down';
+						break;
+				}
+			});
+			
+			$('#board').focus();
+			
+			start();	
+	    });		
+		
+		function boardPiece(x,y)
+		{
+			return $('#'+(x + '_' + y));
+		}
+		
+		function boardPieceOccupied(x,y)
+		{
+			var $boardPiece = boardPiece(x,y);
+			return ( $boardPiece.is('.red') || $boardPiece.is('.blue') )
+		}
+		
+		function boardPieceValue(x,y)
+		{
+			var $boardPiece = boardPiece(x,y);
+			return boardPieceOccupied(x,y) ? ( $boardPiece.is('.red') ? 'red' : 'blue') : '';		
+		}
+		
+		function start()
+		{
+			initialiseBoard();
+			initialiseSnake();
+			initialiseFood();
+			moveSnake();
+		}
+		
+		function initialiseBoard()
+		{
+			$('#board').empty();
+			for (var y=0;y<boardHeight;y++) 
+			{
+				var row = document.createElement('nobr');
+				for(var x=0;x<boardWidth;x++) 
+				{
+					var block  = document.createElement('div');					
+					block.className = 'square';
+					block.id = x + '_' + y;
+					row.appendChild(block);
+				}
+				board.appendChild(row);
+				board.appendChild(document.createElement('br'));
+			}		
+		}
+
+		function initialiseFood()
+		{
+			var foodPos = { x: Math.floor(Math.random()*boardWidth), y : Math.floor(Math.random()*boardHeight) };
+			boardPiece( foodPos.x, foodPos.y ).toggleClass('blue',true);
+		}
+		
+		function moveSnake()
+		{
+			var headPart = snakeParts[snakeParts.length-1];
+			var newPos = movePos(direction,headPart);	
+			
+			snakeParts.push(newPos);
+			
+			if( snakeParts.length > snakeLength )
+			{
+				snakeParts = snakeParts.splice(1,snakeParts.length);
+			}
+			
+			checkMove() ? setTimeout('moveSnake()',50) : start();
+			
+			drawSnake();		
+			
+			//setDirection();			
+		}
+		
+		function checkMove()
+		{
+			var headPart = snakeParts[snakeParts.length-1];
+			var $piece = boardPiece(headPart.x,headPart.y);
+			
+			if( $piece.is('.blue') )
+			{
+				snakeLength = snakeLength + 5;
+				$piece.toggleClass('blue',false);
+				initialiseFood();
+			}
+			
+			return ( !$piece.is('.red') && headPart.x < boardWidth && headPart.x  -1 && headPart.y > -1 && headPart.y < boardHeight);
+		}
+		
+		function setDirection()
+		{
+			var headPart = snakeParts[snakeParts.length-1];
+			if( headPart.x > (boardWidth-5) && direction == 'right')
+			{
+				direction = 'up';
+			}
+			else if( headPart.y < 5 && direction == 'up')
+			{
+				direction = 'left';
+			}
+			else if( headPart.x < 5 && direction == 'left')
+			{
+				direction = 'down';
+			}			
+			else if( headPart.y > (boardHeight-5) && direction == 'down')
+			{
+				direction = 'right';
+			}						
+		}
+		
+		function movePos(direction,position)
+		{
+			var newPos = { x: position.x, y: position.y};
+			switch(direction)
+			{
+				case 'right':
+				newPos.x++;
+				break;
+				case 'left':
+				newPos.x--;
+				break;		
+				case 'up':
+				newPos.y--;
+				break;	
+				case 'down':
+				newPos.y++;
+				break;				
+			}
+			return newPos;
+		}
+		
+		function initialiseSnake()
+		{
+			snakeLength = 5;
+			snakeParts.length = 0;			
+			snakeParts = [startPos];
+			direction = 'right';	
+		
+			for( var i=0;i<snakeLength;i++)
+			{
+				var part = snakeParts[i];
+				var newPos = movePos(direction,part);
+				snakeParts.push(newPos);
+			}
+		}
+		
+		function drawSnake()
+		{
+			for (var i=0;i<snakeParts.length;i++)
+			{
+				var part = snakeParts[i];
+				var $piece = boardPiece(part.x,part.y);
+				$piece.toggleClass('red', i !=0 ? true : false);
+			}		
+		}
+		
+	</script>
+
+</head>
+<body>
+<div id="game">
+	<div id="board" class="roundedBox" tabindex="0">
+	</div>
+</div>
+</body>
+</html>	

@@ -1,0 +1,280 @@
+<html>
+<head>
+    <title>connect 4</title>
+    <!-- <link type="text/css" href="css/ui-lightness/jquery-ui-1.8.1.custom.css" rel="stylesheet"  /> -->
+    <link type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/themes/base/jquery-ui.css" />
+	<link type="text/css" href="css/connect.css" rel="stylesheet"  />
+
+    <!-- <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script> -->
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+
+    <!-- <script type="text/javascript" src="js/jquery-ui-1.8.1.custom.min.js"></script> -->
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.js"></script> 
+
+	<script type="text/javascript">
+	    $(function()
+	    {
+			initialiseBoard();
+			
+            $("#pieces div").draggable(
+			{
+			    cancel: 'a.ui-icon', // clicking an icon won't initiate dragging
+			    revert: 'invalid', // when not dropped, the item will revert back to its initial position
+			    containment: $('#demo-frame').length ? '#demo-frame' : 'document', // stick to demo-frame if present
+			    helper: 'clone',
+			    cursor: 'move',
+				appendTo: "body"
+			});			
+					
+	    });		
+
+		var autoMoved = '';
+		var nextMover = '';
+		var boardWidth = 10;
+		var boardHeight = 6;
+		
+		function boardPiece(x,y)
+		{
+			return $('#'+(x + '_' + y));
+		}
+		
+		function boardPieceOccupied(x,y)
+		{
+			var $boardPiece = boardPiece(x,y);
+			return ( $boardPiece.is('.red') || $boardPiece.is('.blue') )
+		}
+		
+		function boardPieceValue(x,y)
+		{
+			var $boardPiece = boardPiece(x,y);
+			return boardPieceOccupied(x,y) ? ( $boardPiece.is('.red') ? 'red' : 'blue') : '';		
+		}
+
+		function checkPiece(value,x,y,dx,dy)
+		{
+			var neighbours = 0;
+
+			function checkNext(nx,ny)
+			{
+				nx += dx;
+				ny += dy;
+
+				if( nx<0 || nx>=boardWidth || ny<0 || ny>=boardHeight || boardPieceValue(nx,ny) != value)
+				{
+					return;
+				}
+				neighbours ++;
+				checkNext(nx,ny);				
+			}
+			checkNext(x,y);
+			
+			return neighbours;
+		}						
+		
+		function checkBoardForWin()
+		{		
+			for (var y=0;y<boardHeight;y++) 
+			{
+				for(var x=0;x<boardWidth;x++) 
+				{
+					var value = boardPieceValue(x,y);
+					if( value!='')
+					{
+						if( checkPiece(value,x,y,-1,0) > 2 ) return true;
+						if( checkPiece(value,x,y,1,0) > 2 ) return true;
+						if( checkPiece(value,x,y,0,-1) > 2 ) return true;
+						if( checkPiece(value,x,y,0,1) > 2 ) return true;
+						
+						if( checkPiece(value,x,y,-1,-1) > 2 ) return true;
+						if( checkPiece(value,x,y,1,1) > 2 ) return true;
+						if( checkPiece(value,x,y,1,-1) > 2 ) return true;
+						if( checkPiece(value,x,y,-1,1) > 2 ) return true;						
+					}
+				}				
+			}
+		}
+		
+		function initialiseBoard()
+		{
+			// build the board
+			$('#board').empty();
+			for (var y=0;y<boardHeight;y++) 
+			{
+				var row = document.createElement('nobr');
+				for(var x=0;x<boardWidth;x++) 
+				{
+					var block  = document.createElement('div');					
+					block.className = 'square';
+					block.id = x + '_' + y;
+					
+					if( y==0 )
+					{
+						// $(block).click(function(){itemDropped(this);});
+						
+						$(block).droppable(
+									{
+										accept: '#pieces div',
+										activeClass: 'ui-state-hover',
+										hoverClass: 'ui-state-active',
+										drop: function(event, ui)
+										{
+											itemDropped(this,ui.draggable);
+										}
+									});						
+					}
+					row.appendChild(block);
+				}
+				board.appendChild(row);
+				board.appendChild(document.createElement('br'));
+			}		
+			
+			autoMoved = '';
+			nextMover = 'blue';			
+			$('#pieces div.blue').hide();	
+			$('#pieces div.red').show();	
+		}
+		
+		function itemDropped(cell,$square)
+		{
+			var squareName = $square.attr('name');
+			var cellPos = $(cell).attr('id').split('_');
+			if(cellPos[1]==0)
+			{
+				animateDrop ( cellPos[0],cellPos[1],squareName );				
+			}			
+		}
+		
+		function animateDrop(x,y,squareName)
+		{
+			var $boardPiece = boardPiece(x,y);
+			
+			if ( !boardPieceOccupied(x,y) && (y<boardHeight) )
+			{
+				if(y>0)
+				{
+					$('#'+(x + '_' + (y-1))).toggleClass(squareName,false);
+				}
+				
+				$boardPiece.toggleClass(squareName,true);
+				
+				var nextCommand = 'animateDrop(' + x + ',' + (y+1) + ',"' + squareName + '")';
+				setTimeout(nextCommand,50);
+			}
+			else
+			{
+				if( checkBoardForWin() )
+				{
+					alert( squareName + ' wins');
+					initialiseBoard();
+				}
+				else
+				{
+					$('#pieces div.'+squareName).hide();
+					$('#pieces div.'+nextMover).show();
+					nextMover = squareName;	
+
+					if( playerChoice() != 'ai_none')
+					{
+						if( autoMoved != squareName || playerChoice() == 'ai_two') 
+						{
+							takeMove();				
+						}
+					}
+						
+				}
+			}				
+		}
+		
+		function decideMove(squares)
+		{
+			var bestMove = { x : -1, y : -1, weight: -1 };
+			
+			for(var x=0;x<boardWidth;x++) 
+			{
+				for( var y=boardHeight-1;boardPieceOccupied(x,y) && y>0; y--)
+				{
+					// loop until empty spot found 
+				}
+				if( !boardPieceOccupied(x,y) )
+				{
+					var playWeight = checkPiece(squares.me,x,y,-1,0) + checkPiece(squares.me,x,y,1,0);
+					playWeight = maxOf( playWeight, checkPiece(squares.me,x,y,0,-1) + checkPiece(squares.me,x,y,0,1) );
+					playWeight = maxOf( playWeight, checkPiece(squares.me,x,y,-1,-1) + checkPiece(squares.me,x,y,1,1) );
+					playWeight = maxOf( playWeight, checkPiece(squares.me,x,y,1,-1) + checkPiece(squares.me,x,y,-1,1) );
+
+					if(playWeight==3) playWeight+=5;
+					
+					var blockWeight = checkPiece(squares.opponent,x,y,-1,0) + checkPiece(squares.opponent,x,y,1,0);
+					blockWeight = maxOf( blockWeight, checkPiece(squares.opponent,x,y,0,-1) + checkPiece(squares.opponent,x,y,0,1) );
+					blockWeight = maxOf( blockWeight, checkPiece(squares.opponent,x,y,-1,-1) + checkPiece(squares.opponent,x,y,1,1) );
+					blockWeight = maxOf( blockWeight, checkPiece(squares.opponent,x,y,1,-1) + checkPiece(squares.opponent,x,y,-1,1) );
+					
+					if(blockWeight==3) blockWeight+=5;
+					
+					if( (playWeight+blockWeight) > bestMove.weight )
+					{
+						bestMove.x = x;
+						bestMove.y = y;
+						bestMove.weight = (playWeight+blockWeight);
+					}
+				}
+			}	
+			return bestMove;
+		}
+		
+		function takeMove()
+		{
+			var squares = document.getElementById('red1').style.display == 'none' ? {me:'blue',opponent:'red'} : {me:'red',opponent:'blue'};
+			var $square = $('#'+squares.me + '1');
+			var bestMove = decideMove(squares);
+			
+			if ( bestMove.x > -1 )
+			{				
+				var chosenPlace = boardPiece(bestMove.x,0);			
+				itemDropped(chosenPlace,$square);			
+				autoMoved = squares.me;							
+			}
+			else
+			{
+				alert('ai was unable to make move');
+			}
+		}
+		
+		function maxOf(first,second)
+		{
+			return first > second ? first : second;
+		}
+		
+		function playerChoice()
+		{
+			return $('input:radio[checked]').attr('id');
+		}
+		
+	</script>
+
+</head>
+<body>
+<h1 id='title'>Connect Four</h1>
+<div id="game">
+	<div id="pieces" class="roundedBox">
+			<div id="red1" name="red" class="square red"></div>
+			<div id="blue1" name="blue" class="square blue"></div>
+	</div>
+
+	<div id="board" class="roundedBox">
+	</div>
+
+	<div id="buttons" class="roundedBox">
+		<input id="initialiseBoard" type="button" value="re-start game" onclick='initialiseBoard()' />
+		with players:
+		<input type='radio' name='ai' id='ai_two'/><label for='ai_two'>zero</label>
+		<input type='radio' name='ai' id='ai_one' checked='true'/><label for='ai_one'>one</label>
+		<input type='radio' name='ai' id='ai_none'/><label for='ai_none'>two</label>
+		
+		<!--
+		<input id="takeMove" type="button" value="take move" onclick='takeMove()' />
+		-->
+	</div>
+</div>
+</body>
+</html>	
